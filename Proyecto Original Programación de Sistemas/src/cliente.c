@@ -10,6 +10,15 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <time.h>
+
+double obtenerTiempoActual(){
+	struct timespec tsp;
+	clock_gettime( CLOCK_REALTIME, &tsp);
+	double secs = (double)tsp.tv_sec;
+	double nano = (double)tsp.tv_nsec / 1000000000.0;
+	return secs + nano;
+}
 
 int main(int argc, char** argv){
 
@@ -46,9 +55,12 @@ int main(int argc, char** argv){
 	}
 
 	//CONEXIÓN ESTABLECIDA
+	double t_inicial;
+	double t_final;
 
 	char buffer[100] = {0};	
 
+	t_inicial = obtenerTiempoActual();
 	int ruta_enviada = write(client_fd, argv[3], 1000);
 	if(ruta_enviada < 0){
 		perror("¡Error al enviar la ruta!\n");
@@ -56,14 +68,23 @@ int main(int argc, char** argv){
 	}
 
 	int size_recv = read(client_fd, buffer, 100);
+	t_final = obtenerTiempoActual();
 	if(size_recv < 0){
 		perror("¡Error al recibir la respuesta del servidor!\n");
 		exit(-1);
 	}
-	printf("\n");
+	
+	umask(0);
+	int file_descriptor = open("../latenciasOriginal.txt", O_CREAT | O_RDWR | O_APPEND, 0666);
+	char latencia[10]; 
+	sprintf(latencia,"%f\n",t_final-t_inicial);
+	write(file_descriptor,latencia,strlen(latencia));
+	
+	//printf("\n");
 	printf("Recibido: %s\n",buffer);
 
 	close(client_fd);
+	close(file_descriptor);
 
 	return 0;
 
